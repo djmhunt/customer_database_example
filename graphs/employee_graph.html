@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "President", "label": "President", "shape": "elipse", "title": "President"}, {"color": "#97c2fc", "id": "VP Sales", "label": "VP Sales", "shape": "elipse", "title": "VP Sales"}, {"color": "#97c2fc", "id": "VP Marketing", "label": "VP Marketing", "shape": "elipse", "title": "VP Marketing"}, {"color": "#97c2fc", "id": "Sales Manager (APAC)", "label": "Sales Manager (APAC)", "shape": "elipse", "title": "Sales Manager (APAC)"}, {"color": "#97c2fc", "id": "Sale Manager (EMEA)", "label": "Sale Manager (EMEA)", "shape": "elipse", "title": "Sale Manager (EMEA)"}, {"color": "#97c2fc", "id": "Sales Manager (NA)", "label": "Sales Manager (NA)", "shape": "elipse", "title": "Sales Manager (NA)"}, {"color": "#97c2fc", "id": "Sales Rep", "label": "Sales Rep", "shape": "elipse", "title": "Sales Rep"}, {"color": "#97c2fc", "id": "Diane Murphy", "label": "Diane Murphy", "shape": "box", "title": "Diane Murphy"}, {"color": "#97c2fc", "id": "Mary Patterson", "label": "Mary Patterson", "shape": "box", "title": "Mary Patterson"}, {"color": "#97c2fc", "id": "Jeff Firrelli", "label": "Jeff Firrelli", "shape": "box", "title": "Jeff Firrelli"}, {"color": "#97c2fc", "id": "William Patterson", "label": "William Patterson", "shape": "box", "title": "William Patterson"}, {"color": "#97c2fc", "id": "Gerard Bondur", "label": "Gerard Bondur", "shape": "box", "title": "Gerard Bondur"}, {"color": "#97c2fc", "id": "Anthony Bow", "label": "Anthony Bow", "shape": "box", "title": "Anthony Bow"}, {"color": "#97c2fc", "id": "Leslie Jennings", "label": "Leslie Jennings", "shape": "box", "title": "Leslie Jennings"}, {"color": "#97c2fc", "id": "Leslie Thompson", "label": "Leslie Thompson", "shape": "box", "title": "Leslie Thompson"}, {"color": "#97c2fc", "id": "Julie Firrelli", "label": "Julie Firrelli", "shape": "box", "title": "Julie Firrelli"}, {"color": "#97c2fc", "id": "Steve Patterson", "label": "Steve Patterson", "shape": "box", "title": "Steve Patterson"}, {"color": "#97c2fc", "id": "Foon Yue Tseng", "label": "Foon Yue Tseng", "shape": "box", "title": "Foon Yue Tseng"}, {"color": "#97c2fc", "id": "George Vanauf", "label": "George Vanauf", "shape": "box", "title": "George Vanauf"}, {"color": "#97c2fc", "id": "Loui Bondur", "label": "Loui Bondur", "shape": "box", "title": "Loui Bondur"}, {"color": "#97c2fc", "id": "Gerard Hernandez", "label": "Gerard Hernandez", "shape": "box", "title": "Gerard Hernandez"}, {"color": "#97c2fc", "id": "Pamela Castillo", "label": "Pamela Castillo", "shape": "box", "title": "Pamela Castillo"}, {"color": "#97c2fc", "id": "Larry Bott", "label": "Larry Bott", "shape": "box", "title": "Larry Bott"}, {"color": "#97c2fc", "id": "Barry Jones", "label": "Barry Jones", "shape": "box", "title": "Barry Jones"}, {"color": "#97c2fc", "id": "Andy Fixter", "label": "Andy Fixter", "shape": "box", "title": "Andy Fixter"}, {"color": "#97c2fc", "id": "Peter Marsh", "label": "Peter Marsh", "shape": "box", "title": "Peter Marsh"}, {"color": "#97c2fc", "id": "Tom King", "label": "Tom King", "shape": "box", "title": "Tom King"}, {"color": "#97c2fc", "id": "Mami Nishi", "label": "Mami Nishi", "shape": "box", "title": "Mami Nishi"}, {"color": "#97c2fc", "id": "Yoshimi Kato", "label": "Yoshimi Kato", "shape": "box", "title": "Yoshimi Kato"}, {"color": "#97c2fc", "id": "Martin Gerard", "label": "Martin Gerard", "shape": "box", "title": "Martin Gerard"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "Diane Murphy", "label": "job_title", "physics": true, "to": "President"}, {"arrows": "to", "from": "Diane Murphy", "label": "reports_to", "to": "Diane Murphy"}, {"arrows": "to", "from": "Mary Patterson", "label": "job_title", "physics": true, "to": "VP Sales"}, {"arrows": "to", "from": "Mary Patterson", "label": "reports_to", "to": "Diane Murphy"}, {"arrows": "to", "from": "Jeff Firrelli", "label": "job_title", "physics": true, "to": "VP Marketing"}, {"arrows": "to", "from": "Jeff Firrelli", "label": "reports_to", "to": "Diane Murphy"}, {"arrows": "to", "from": "William Patterson", "label": "job_title", "physics": true, "to": "Sales Manager (APAC)"}, {"arrows": "to", "from": "William Patterson", "label": "reports_to", "to": "Mary Patterson"}, {"arrows": "to", "from": "Gerard Bondur", "label": "job_title", "physics": true, "to": "Sale Manager (EMEA)"}, {"arrows": "to", "from": "Gerard Bondur", "label": "reports_to", "to": "Mary Patterson"}, {"arrows": "to", "from": "Anthony Bow", "label": "job_title", "physics": true, "to": "Sales Manager (NA)"}, {"arrows": "to", "from": "Anthony Bow", "label": "reports_to", "to": "Mary Patterson"}, {"arrows": "to", "from": "Leslie Jennings", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Leslie Jennings", "label": "reports_to", "to": "Anthony Bow"}, {"arrows": "to", "from": "Leslie Thompson", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Leslie Thompson", "label": "reports_to", "to": "Anthony Bow"}, {"arrows": "to", "from": "Julie Firrelli", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Julie Firrelli", "label": "reports_to", "to": "Anthony Bow"}, {"arrows": "to", "from": "Steve Patterson", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Steve Patterson", "label": "reports_to", "to": "Anthony Bow"}, {"arrows": "to", "from": "Foon Yue Tseng", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Foon Yue Tseng", "label": "reports_to", "to": "Anthony Bow"}, {"arrows": "to", "from": "George Vanauf", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "George Vanauf", "label": "reports_to", "to": "Anthony Bow"}, {"arrows": "to", "from": "Loui Bondur", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Loui Bondur", "label": "reports_to", "to": "Gerard Bondur"}, {"arrows": "to", "from": "Gerard Hernandez", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Gerard Hernandez", "label": "reports_to", "to": "Gerard Bondur"}, {"arrows": "to", "from": "Pamela Castillo", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Pamela Castillo", "label": "reports_to", "to": "Gerard Bondur"}, {"arrows": "to", "from": "Larry Bott", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Larry Bott", "label": "reports_to", "to": "Gerard Bondur"}, {"arrows": "to", "from": "Barry Jones", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Barry Jones", "label": "reports_to", "to": "Gerard Bondur"}, {"arrows": "to", "from": "Andy Fixter", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Andy Fixter", "label": "reports_to", "to": "William Patterson"}, {"arrows": "to", "from": "Peter Marsh", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Peter Marsh", "label": "reports_to", "to": "William Patterson"}, {"arrows": "to", "from": "Tom King", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Tom King", "label": "reports_to", "to": "William Patterson"}, {"arrows": "to", "from": "Mami Nishi", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Mami Nishi", "label": "reports_to", "to": "Mary Patterson"}, {"arrows": "to", "from": "Yoshimi Kato", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Yoshimi Kato", "label": "reports_to", "to": "Mami Nishi"}, {"arrows": "to", "from": "Martin Gerard", "label": "job_title", "physics": true, "to": "Sales Rep"}, {"arrows": "to", "from": "Martin Gerard", "label": "reports_to", "to": "Gerard Bondur"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
